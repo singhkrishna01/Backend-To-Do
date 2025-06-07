@@ -8,29 +8,29 @@ const getTodos = async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
 
-    // Sorting options
     const sortBy = req.query.sortBy || 'createdAt';
     const sortOrder = req.query.sortOrder === 'asc' ? 1 : -1;
     const sortOptions = { [sortBy]: sortOrder };
 
-    // Filter options
     const filter = { userId: req.user._id };
+
     if (req.query.priority) {
       filter.priority = req.query.priority;
     }
+
     if (req.query.completed !== undefined) {
       filter.completed = req.query.completed === 'true';
     }
+
     if (req.query.tag) {
       filter.tags = req.query.tag;
     }
+
     if (req.query.mention) {
-      // Find user by username and use their ID for filtering
       const user = await User.findOne({ username: req.query.mention });
       if (user) {
         filter.mentions = user._id;
       } else {
-        // If user not found, return empty result
         return res.status(200).json({
           success: true,
           data: [],
@@ -46,7 +46,6 @@ const getTodos = async (req, res) => {
       }
     }
 
-    // Search functionality
     if (req.query.search) {
       filter.$or = [
         { title: { $regex: req.query.search, $options: 'i' } },
@@ -93,7 +92,7 @@ const getTodo = async (req, res) => {
       .populate('userId', 'name email')
       .populate('mentions', 'name email')
       .populate('notes.createdBy', 'name email');
-    
+
     if (!todo) {
       return res.status(404).json({
         success: false,
@@ -119,7 +118,6 @@ const createTodo = async (req, res) => {
   try {
     const { title, description, priority, tags, mentions } = req.body;
 
-    // Process mentions if any
     let mentionIds = [];
     if (mentions && mentions.length > 0) {
       const users = await User.find({ username: { $in: mentions } });
@@ -153,13 +151,22 @@ const createTodo = async (req, res) => {
   }
 };
 
-// Update todo
+// ✅ Debugged Update todo
 const updateTodo = async (req, res) => {
   try {
     const { mentions } = req.body;
-    let updateData = { ...req.body };
 
-    // Process mentions if provided
+    // Allow only certain fields to update
+    const allowedFields = ['title', 'description', 'priority', 'tags', 'mentions', 'completed'];
+    const updateData = {};
+
+    allowedFields.forEach(field => {
+      if (req.body[field] !== undefined) {
+        updateData[field] = req.body[field];
+      }
+    });
+
+    // Process mentions
     if (mentions && mentions.length > 0) {
       const users = await User.find({ username: { $in: mentions } });
       updateData.mentions = users.map(user => user._id);
@@ -170,9 +177,9 @@ const updateTodo = async (req, res) => {
       updateData,
       { new: true, runValidators: true }
     )
-    .populate('userId', 'name email')
-    .populate('mentions', 'name email')
-    .populate('notes.createdBy', 'name email');
+      .populate('userId', 'name email')
+      .populate('mentions', 'name email')
+      .populate('notes.createdBy', 'name email');
 
     if (!todo) {
       return res.status(404).json({
@@ -187,6 +194,7 @@ const updateTodo = async (req, res) => {
       message: 'Todo updated successfully'
     });
   } catch (error) {
+    console.error('Update Error:', error); // Debug log
     res.status(400).json({
       success: false,
       message: 'Error updating todo',
@@ -296,7 +304,7 @@ const getTodoStats = async (req, res) => {
       data: {
         ...result,
         pendingTodos: result.totalTodos - result.completedTodos,
-        completionRate: result.totalTodos > 0 ? (result.completedTodos / result.totalTodos * 100).toFixed(2) : 0
+        completionRate: result.totalTodos > 0 ? ((result.completedTodos / result.totalTodos) * 100).toFixed(2) : 0
       }
     });
   } catch (error) {
