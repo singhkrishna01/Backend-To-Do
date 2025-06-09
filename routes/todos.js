@@ -11,7 +11,6 @@ const {
   addNote
 } = require('../controllers/todoController');
 
-// Protect all todo routes
 router.use(protect);
 
 router.route('/').get(getTodos).post(createTodo);

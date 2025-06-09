@@ -1,7 +1,6 @@
 const User = require('../models/User');
 const Todo = require('../models/Todo');
 
-// Get all users with pagination
 const getUsers = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
@@ -38,7 +37,7 @@ const getUsers = async (req, res) => {
   }
 };
 
-// Get single user
+
 const getUser = async (req, res) => {
   try {
     const user = await User.findById(req.params.id).select('-password');
@@ -50,7 +49,7 @@ const getUser = async (req, res) => {
       });
     }
 
-    // Get user's todo count
+    
     const todoCount = await Todo.countDocuments({ userId: user._id });
 
     res.status(200).json({
@@ -69,12 +68,11 @@ const getUser = async (req, res) => {
   }
 };
 
-// Create new user
+
 const createUser = async (req, res) => {
   try {
     const { name, email, password } = req.body;
 
-    // Check if user already exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({
@@ -89,7 +87,6 @@ const createUser = async (req, res) => {
       password
     });
 
-    // Remove password from response
     const userResponse = user.toObject();
     delete userResponse.password;
 
@@ -107,12 +104,11 @@ const createUser = async (req, res) => {
   }
 };
 
-// Update user
+
 const updateUser = async (req, res) => {
   try {
     const updateData = { ...req.body };
     
-    // Don't allow password updates through this endpoint
     delete updateData.password;
 
     const user = await User.findByIdAndUpdate(
@@ -142,7 +138,6 @@ const updateUser = async (req, res) => {
   }
 };
 
-// Delete user
 const deleteUser = async (req, res) => {
   try {
     const user = await User.findByIdAndDelete(req.params.id);
@@ -154,7 +149,6 @@ const deleteUser = async (req, res) => {
       });
     }
 
-    // Delete all todos associated with this user
     await Todo.deleteMany({ userId: req.params.id });
 
     res.status(200).json({
@@ -170,7 +164,6 @@ const deleteUser = async (req, res) => {
   }
 };
 
-// User login
 const loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -191,7 +184,6 @@ const loginUser = async (req, res) => {
       });
     }
 
-    // Generate token
     const token = user.generateToken();
 
     const userResponse = user.toObject();

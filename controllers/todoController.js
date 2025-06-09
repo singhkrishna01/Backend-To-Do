@@ -1,7 +1,6 @@
 const Todo = require('../models/Todo');
 const User = require('../models/User');
 
-// Get all todos with pagination and sorting
 const getTodos = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
@@ -85,7 +84,6 @@ const getTodos = async (req, res) => {
   }
 };
 
-// Get single todo
 const getTodo = async (req, res) => {
   try {
     const todo = await Todo.findById(req.params.id)
@@ -113,7 +111,6 @@ const getTodo = async (req, res) => {
   }
 };
 
-// Create new todo
 const createTodo = async (req, res) => {
   try {
     const { title, description, priority, tags, mentions } = req.body;
@@ -151,40 +148,56 @@ const createTodo = async (req, res) => {
   }
 };
 
-// ✅ Debugged Update todo
 const updateTodo = async (req, res) => {
   try {
     const { mentions } = req.body;
-
-    // Allow only certain fields to update
     const allowedFields = ['title', 'description', 'priority', 'tags', 'mentions', 'completed'];
     const updateData = {};
 
+    // Build update object with only allowed fields
     allowedFields.forEach(field => {
       if (req.body[field] !== undefined) {
         updateData[field] = req.body[field];
       }
     });
 
-    // Process mentions
-    if (mentions && mentions.length > 0) {
-      const users = await User.find({ username: { $in: mentions } });
-      updateData.mentions = users.map(user => user._id);
+    // Handle mentions - convert usernames to user IDs
+    if (mentions !== undefined) {
+      if (mentions && mentions.length > 0) {
+        // Find users by username
+        const users = await User.find({ username: { $in: mentions } });
+        updateData.mentions = users.map(user => user._id);
+        
+        // Optional: Warn if some usernames weren't found
+        if (users.length !== mentions.length) {
+          console.warn('Some mentioned users were not found');
+        }
+      } else {
+        // If mentions array is empty, clear all mentions
+        updateData.mentions = [];
+      }
     }
 
-    const todo = await Todo.findByIdAndUpdate(
-      req.params.id,
+    // Find and update the todo (with ownership check)
+    const todo = await Todo.findOneAndUpdate(
+      { 
+        _id: req.params.id,
+        userId: req.user._id  // Ensure user owns this todo
+      },
       updateData,
-      { new: true, runValidators: true }
+      { 
+        new: true, 
+        runValidators: true 
+      }
     )
-      .populate('userId', 'name email')
-      .populate('mentions', 'name email')
-      .populate('notes.createdBy', 'name email');
+      .populate('userId', 'name email username')
+      .populate('mentions', 'name email username')
+      .populate('notes.createdBy', 'name email username');
 
     if (!todo) {
       return res.status(404).json({
         success: false,
-        message: 'Todo not found'
+        message: 'Todo not found or you do not have permission to update it'
       });
     }
 
@@ -194,7 +207,23 @@ const updateTodo = async (req, res) => {
       message: 'Todo updated successfully'
     });
   } catch (error) {
-    console.error('Update Error:', error); // Debug log
+    // Handle validation errors specifically
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation error',
+        errors: Object.values(error.errors).map(e => e.message)
+      });
+    }
+
+    // Handle cast errors (invalid ObjectId)
+    if (error.name === 'CastError') {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid todo ID format'
+      });
+    }
+
     res.status(400).json({
       success: false,
       message: 'Error updating todo',
@@ -203,7 +232,6 @@ const updateTodo = async (req, res) => {
   }
 };
 
-// Add note to todo
 const addNote = async (req, res) => {
   try {
     const { content } = req.body;
@@ -242,7 +270,6 @@ const addNote = async (req, res) => {
   }
 };
 
-// Delete todo
 const deleteTodo = async (req, res) => {
   try {
     const todo = await Todo.findByIdAndDelete(req.params.id);
@@ -267,10 +294,16 @@ const deleteTodo = async (req, res) => {
   }
 };
 
-// Get todo statistics
 const getTodoStats = async (req, res) => {
   try {
+    const userId = req.user._id;
+
     const stats = await Todo.aggregate([
+      {
+        $match: {
+          userId: userId
+        }
+      },
       {
         $group: {
           _id: null,
@@ -304,7 +337,10 @@ const getTodoStats = async (req, res) => {
       data: {
         ...result,
         pendingTodos: result.totalTodos - result.completedTodos,
-        completionRate: result.totalTodos > 0 ? ((result.completedTodos / result.totalTodos) * 100).toFixed(2) : 0
+        completionRate:
+          result.totalTodos > 0
+            ? ((result.completedTodos / result.totalTodos) * 100).toFixed(2)
+            : 0
       }
     });
   } catch (error) {

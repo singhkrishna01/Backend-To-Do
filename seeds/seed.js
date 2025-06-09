@@ -7,47 +7,43 @@ const connectDB = require('../config/database');
 
 const seedData = async () => {
   try {
-    // Connect to database
     await connectDB();
 
-    // Clear existing data
     await User.deleteMany({});
     await Todo.deleteMany({});
 
     console.log('Existing data cleared...');
 
-    // Create sample users
     const users = await User.create([
       {
-        name: 'John Doe',
-        email: 'john@example.com',
+        name: 'krishna',
+        email: 'krish@example.com',
         password: '123456'
       },
       {
-        name: 'Jane Smith',
-        email: 'jane@example.com',
+        name: 'kshitij',
+        email: 'kshitij@example.com',
         password: '123456'
       },
       {
-        name: 'Baby Johnson',
-        email: 'baby@example.com',
+        name: 'gautam',
+        email: 'gautam@example.com',
         password: '123456'
       },
       {
-        name: 'Jany Smith',
-        email: 'jany@example.com',
+        name: 'keshav',
+        email: 'keshav@example.com',
         password: '123456'
       },
       {
-        name: 'reem Johnson',
-        email: 'reema@example.com',
+        name: 'mayank',
+        email: 'mayank@example.com',
         password: '123456'
       }
     ]);
 
     console.log('Users created...');
 
-    // Create sample todos
     const todos = [
       {
         title: 'Complete project documentation',
@@ -104,7 +100,6 @@ const seedData = async () => {
     console.log('Todos created...');
     console.log('Database seeded successfully!');
     
-    // Display created data
     console.log('\n--- Created Users ---');
     users.forEach(user => {
       console.log(`ID: ${user._id}, Name: ${user.name}, Email: ${user.email}`);
