@@ -116,8 +116,11 @@ const createTodo = async (req, res) => {
     const { title, description, priority, tags, mentions } = req.body;
 
     let mentionIds = [];
+
     if (mentions && mentions.length > 0) {
-      const users = await User.find({ username: { $in: mentions } });
+      // Change from username to name
+      const users = await User.find({ name: { $in: mentions } });
+      
       mentionIds = users.map(user => user._id);
     }
 
@@ -129,6 +132,8 @@ const createTodo = async (req, res) => {
       mentions: mentionIds,
       userId: req.user._id
     });
+    
+    // ... rest of your code
 
     const populatedTodo = await Todo.findById(todo._id)
       .populate('userId', 'name email')
@@ -165,7 +170,7 @@ const updateTodo = async (req, res) => {
     if (mentions !== undefined) {
       if (mentions && mentions.length > 0) {
         // Find users by username
-        const users = await User.find({ username: { $in: mentions } });
+        const users = await User.find({ name: { $in: mentions } });
         updateData.mentions = users.map(user => user._id);
         
         // Optional: Warn if some usernames weren't found
