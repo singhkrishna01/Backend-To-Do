@@ -54,7 +54,6 @@ const todoSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Index for better query performance
 todoSchema.index({ userId: 1, createdAt: -1 });
 todoSchema.index({ priority: 1 });
 todoSchema.index({ tags: 1 });

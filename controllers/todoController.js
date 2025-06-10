@@ -118,7 +118,6 @@ const createTodo = async (req, res) => {
     let mentionIds = [];
 
     if (mentions && mentions.length > 0) {
-      // Change from username to name
       const users = await User.find({ name: { $in: mentions } });
       
       mentionIds = users.map(user => user._id);
@@ -133,7 +132,6 @@ const createTodo = async (req, res) => {
       userId: req.user._id
     });
     
-    // ... rest of your code
 
     const populatedTodo = await Todo.findById(todo._id)
       .populate('userId', 'name email')
@@ -159,35 +157,29 @@ const updateTodo = async (req, res) => {
     const allowedFields = ['title', 'description', 'priority', 'tags', 'mentions', 'completed'];
     const updateData = {};
 
-    // Build update object with only allowed fields
     allowedFields.forEach(field => {
       if (req.body[field] !== undefined) {
         updateData[field] = req.body[field];
       }
     });
 
-    // Handle mentions - convert usernames to user IDs
     if (mentions !== undefined) {
       if (mentions && mentions.length > 0) {
-        // Find users by username
         const users = await User.find({ name: { $in: mentions } });
         updateData.mentions = users.map(user => user._id);
         
-        // Optional: Warn if some usernames weren't found
         if (users.length !== mentions.length) {
           console.warn('Some mentioned users were not found');
         }
       } else {
-        // If mentions array is empty, clear all mentions
         updateData.mentions = [];
       }
     }
 
-    // Find and update the todo (with ownership check)
     const todo = await Todo.findOneAndUpdate(
       { 
         _id: req.params.id,
-        userId: req.user._id  // Ensure user owns this todo
+        userId: req.user._id
       },
       updateData,
       { 
@@ -212,7 +204,6 @@ const updateTodo = async (req, res) => {
       message: 'Todo updated successfully'
     });
   } catch (error) {
-    // Handle validation errors specifically
     if (error.name === 'ValidationError') {
       return res.status(400).json({
         success: false,
@@ -221,7 +212,6 @@ const updateTodo = async (req, res) => {
       });
     }
 
-    // Handle cast errors (invalid ObjectId)
     if (error.name === 'CastError') {
       return res.status(400).json({
         success: false,
